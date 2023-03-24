@@ -1,0 +1,382 @@
+---
+title: "Cyclistic bike-share analysis case study"
+author: "Guinansaca William"
+date: "2022-12-14"
+output: github_document
+---
+
+This case study represents the _capstone project_ of the Google Data Analytics Professional Certificate on Coursera. In order to answer the key business questions, I am going to analyze the steps of the data analysis process: __ask, prepare, process, analyze, share, and act.__
+
+# Ask
+
+### Context
+
+Cyclistic is a fictional company related to a bike-share business. It wants to improve its profit by becoming the most of its clients in annual memberships. The goal of the analysis is to decide the best paths to get this improvement in the gains. 
+
+The company works with these pricing plans: single-ride passes, full-day passes, and annual memberships. Customers who purchase single-ride or full-day passes are referred to as casual riders. Customers who purchase annual memberships are Cyclistic members.
+
+Cyclistic’s finance analysts have concluded that annual members are much more profitable than casual riders. Then, the goal is to design marketing strategies aimed at converting casual riders into annual members.
+
+### Consider key stakeholders
+
+Key stakeholders include: Cyclistic executive team, Director of Marketing (Lily Moreno), Marketing Analytics team.
+
+# Prepare
+
+All the data has been downloaded from: https://divvy-tripdata.s3.amazonaws.com/index.html (For the purposes of this case study, the datasets are appropriate and will enable to answer the business questions. The data has been made available by Motivate International Inc. under this license.)
+
+### Does your data ROCCC?
+
+It is the process to identifying good data where it has to be: realible, original, comprehensive, current and cited. Due to the fact that this is a case study using public data, we are going to assume the data is ROCCC.
+
+### Identify how the data is organized
+
+All trip data is in comma-delimited (.CSV) format with 13 columns, including: ride ID, ride type, start/end time, starting point (station, and latitude/longitude), ending point (station and latitude/longitude), and member/casual rider.
+
+# Process
+
+### Load the packages and all the files in Rstudio
+
+The tool use to check the data is Rstudio and its tydiverse library
+
+```{r message=FALSE, warning=FALSE} 
+# Packages installation
+
+install.packages("tidyverse", repos = "http://cran.us.r-project.org") #to cleaning data 
+install.packages("janitor", repos = "http://cran.us.r-project.org") #to cleaning data
+install.packages("skimr", repos = "http://cran.us.r-project.org") # to statistics tools
+install.packages("Tmisc", repos = "http://cran.us.r-project.org") # to data manipulation
+install.packages("lubridate", repos = "http://cran.us.r-project.org") # to work with dates
+install.packages("hms", repos = "http://cran.us.r-project.org")
+install.packages("modeest", repos = "http://cran.us.r-project.org")
+
+# Load the packages
+
+library(tidyverse)
+library(janitor)
+library(skimr)
+library(Tmisc)
+library(lubridate)
+library(hms)
+library(modeest)
+```
+
+The code chunk below will import 12 individual files that represents the last work year
+
+```{r message=FALSE, warning=FALSE}
+#Read datasets
+
+trip11_21 <- read.csv("raw_data/202111-divvy-tripdata.csv")
+trip12_21 <- read.csv("raw_data/202112-divvy-tripdata.csv")
+trip01_22 <- read.csv("raw_data/202201-divvy-tripdata.csv")
+trip02_22 <- read.csv("raw_data/202202-divvy-tripdata.csv")
+trip03_22 <- read.csv("raw_data/202203-divvy-tripdata.csv")
+trip04_22 <- read.csv("raw_data/202204-divvy-tripdata.csv")
+trip05_22 <- read.csv("raw_data/202205-divvy-tripdata.csv")
+trip06_22 <- read.csv("raw_data/202206-divvy-tripdata.csv")
+trip07_22 <- read.csv("raw_data/202207-divvy-tripdata.csv")
+trip08_22 <- read.csv("raw_data/202208-divvy-tripdata.csv")
+trip09_22 <- read.csv("raw_data/202209-divvy-tripdata.csv")
+trip10_22 <- read.csv("raw_data/202210-divvy-tripdata.csv")
+```
+
+
+### Previous review to join the data into one file
+
+Previously to combine the data into one single file, it is necessary to compare the column names because they do need to match perfectly before we can use a command to join them into one file.
+```{r}
+# Check the column names
+colnames(trip11_21)
+colnames(trip12_21)
+colnames(trip01_22)
+colnames(trip02_22)
+colnames(trip03_22)
+colnames(trip04_22)
+colnames(trip05_22)
+colnames(trip06_22)
+colnames(trip07_22)
+colnames(trip08_22)
+colnames(trip09_22)
+colnames(trip10_22)
+```
+
+In addition, we check for the structure of the files
+```{r}
+# Inspect the data frames and look for incongruencies
+str(trip11_21)
+str(trip12_21)
+str(trip01_22)
+str(trip02_22)
+str(trip03_22)
+str(trip04_22)
+str(trip05_22)
+str(trip06_22)
+str(trip07_22)
+str(trip08_22)
+str(trip09_22)
+str(trip10_22)
+```
+
+### Merge the data into one data frame
+
+The data has the same column names and data types, so it can be merge.
+```{r}
+# Merge individual files into one data frame
+
+df <- rbind(trip11_21, trip12_21, trip01_22, trip02_22, trip03_22, trip04_22, trip05_22, trip06_22, trip07_22, trip08_22, trip09_22, trip10_22)
+
+# Glance the data frame
+str(df)
+```
+
+### Cleaning data
+
+Identify and count missing data:
+```{r}
+sum(is.na(df))
+```
+
+Statistical summary of numerical variables:
+```{r}
+summary(df)
+```
+
+Get unique values of the categorical variable:
+```{r}
+# Unique values for member_casual column
+unique(df$member_casual)
+
+# Unique values for rideable_type column
+unique(df$rideable_type)
+```
+
+Count occurrences of each category in a categorical variable:
+```{r}
+# 
+table(df$member_casual)
+sum(table(df$member_casual))
+table(df$rideable_type)
+sum(table(df$rideable_type))
+```
+
+Identify duplicates:
+```{r}
+# Identify duplicates
+dups <- duplicated(df$ride_id)
+
+# Show the duplicated rows
+df[dups, ]
+```
+
+Look for empty or blank values:
+```{r}
+colSums(df=="")
+```
+The columns related to the analysis does not contain empty values.
+
+Identify whitespaces:
+```{r}
+sum(grepl("^\\s*$", df$ride_id))
+sum(grepl("^\\s*$", df$rideable_type))
+sum(grepl("^\\s*$", df$started_at))
+sum(grepl("^\\s*$", df$member_casual))
+```
+
+
+### Transform the data to work with it effectively
+
+It can be erased the columns which are not going to use:
+```{r}
+# Delete the columns
+df1 <- select(df, -start_lat, -start_lng, -end_lat, -end_lng)
+
+# Glance the data frame
+skim_without_charts(df1)
+```
+
+To add some additional columns of data -- such as day, month, year -- that provide additional opportunities to aggregate the data.
+```{r}
+df11 <- df1 %>%
+  mutate(date = as.Date(started_at, "%Y-%m-%d")) %>%
+  mutate(month = format(as.Date(started_at, "%Y-%m-%d"), "%m")) %>% 
+  mutate(day = format(as.Date(started_at, "%Y-%m-%d"), "%d")) %>% 
+  mutate(year = format(as.Date(started_at, "%Y-%m-%d"), "%Y")) %>% 
+  mutate(day_of_week = format(as.Date(started_at, "%Y-%m-%d"), "%A"))
+
+str(df11)
+```
+
+Besides, it will be to add a _ride_length_ calculation in seconds and hours
+```{r}
+# Add a ride_length column
+
+df12 <- df11 %>% 
+  mutate(ride_length_sec = difftime(ended_at, started_at),
+         ride_length_hrs = as_hms(difftime(ended_at, started_at)))
+
+str(df12)
+```
+
+# Analyze
+
+### Descriptive analysis
+
+Let's get a general overview of the data and identify any patterns or trends in the data.
+
+```{r}
+# Compare members and casual users
+
+aggregate(df12$ride_length_sec ~ df12$member_casual, FUN = mean)
+aggregate(df12$ride_length_sec ~ df12$member_casual, FUN = median)
+aggregate(df12$ride_length_sec ~ df12$member_casual, FUN = max)
+aggregate(df12$ride_length_sec ~ df12$member_casual, FUN = min)
+```
+
+There are negative values that are affecting the results and these need to be erased it.
+
+```{r}
+# Clear values with a condition
+df4 <- df12[!(df12$start_station_name == "HQ QR" | df12$ride_length_sec<=0),]
+
+# Check for negative values
+as_hms(min(df4$ride_length_sec))
+```
+
+### Average of the ride length
+
+```{r}
+# Average in hrs and sec
+avg_hrs <- as_hms(mean(df4$ride_length_sec))
+avg_sec <- mean(df4$ride_length_sec)
+
+avg_hrs
+avg_sec
+```
+
+### Average of the ride length by type of cyclist
+
+```{r}
+aggregate(df4$ride_length_sec ~ df4$member_casual, FUN = mean)
+```
+
+### Check for the mode
+
+```{r}
+tabla_frec <- table(df4$day_of_week)    # Create a frequency table
+moda_day_of_week <- names(tabla_frec)[which.max(tabla_frec)] # Find the more frequently value
+
+tabla_frec1 <- table(df4$month)    
+mode_month <- names(tabla_frec1)[which.max(tabla_frec1)]
+
+moda_day_of_week
+mode_month
+```
+
+### Check for the mode by type of cyclist
+
+```{r}
+aggregate(df4$day_of_week ~ df4$member_casual, FUN = mfv)
+```
+
+### Check for the most popular bike by user
+```{r}
+aggregate(df4$rideable_type ~ df4$member_casual, FUN = mfv)
+```
+
+### The average ride length at day by type of cyclist
+
+```{r}
+df4$day_of_week <- ordered(df4$day_of_week, levels=c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"))
+
+aggregate(df4$ride_length_sec ~ df4$member_casual + df4$day_of_week, FUN = mean)
+```
+
+#### Identify trends and relationships
+
+* Casual user has more longer rides than members. It determines the behavior because casual user can use this service because of tourism or a time relax. While member user needs this service because of time saving when they go to work, school, etc. 
+
+* In addition, the most popular day for a ride for casual users is Saturday, unlike the members users and their Thursday popular day. 
+
+* Both have their relax time during weekend, however for the casual users this day is Sunday, while for member users this day is Saturday. 
+
+# Share
+
+Create effective data visualizations
+
+```{r}
+# Ride's average duration
+df4 %>% 
+  group_by(member_casual, day_of_week) %>% 
+  summarize(average_duration = as_hms(mean(ride_length_sec))) %>% 
+  arrange(member_casual, day_of_week) %>% 
+  ggplot(aes(day_of_week, average_duration, fill = member_casual)) + 
+  geom_col(position = "dodge") + labs(x = "Day of week", y = "Average trip duration [min]", title = "Ride's average duration", fill = "User") + theme_classic()
+```
+The rent by member users keep its behavior during the workweek. In both cases, there are more longer trips during the weekend. 
+
+```{r}
+# number of rides by rider type 
+df4 %>% 
+  group_by(member_casual, day_of_week) %>% 
+  summarize(number_of_rides = n()) %>% 
+  arrange(member_casual, day_of_week) %>% 
+  ggplot(aes(day_of_week, number_of_rides, fill = member_casual)) + 
+  geom_col(position = "dodge") + labs(x = "Day of week", y = "Number of rides", title = "Number of rides by day", fill = "User") + theme_classic()
+```
+The workweek favored to member users and it's important to notice during the weekend the casual users overcome to members users. We can observe there are an important use of the bicycle by casual users during the workweek.
+
+```{r}
+# number of rides by month
+df4 %>% 
+  group_by(member_casual, month) %>% 
+  summarize(number_of_rides = n()) %>% 
+  arrange(member_casual, month) %>% 
+  ggplot(aes(number_of_rides, month, fill = member_casual)) +
+  geom_col(position = "dodge") + labs(x = "Number of rides", y = "Month", title = "Number of rides by month", fill = "User") + theme_classic()
+```
+The most popular months are July and August for members users, while June and July  are most popular to casual riders. 
+
+```{r}
+# Number of rides by bike type and rider type
+df4 %>% 
+  group_by(member_casual, rideable_type) %>% 
+  summarize(number_of_rides = n()) %>% 
+  arrange(member_casual, rideable_type) %>% 
+  ggplot(aes(rideable_type, number_of_rides, fill = member_casual)) + 
+  geom_col(position = "dodge") + labs(x = "Type of bike", y = "Number of rides", title = "Most popular bike according to user", fill = "User") + theme_classic()
+```
+The docked bike just can be used by casual user, and the most popular bike for casual users is the electric bike while classic bike has a little bit more preference than electric bike between members.
+
+```{r}
+# bike type more popular by month 
+df4 %>% 
+  group_by(rideable_type, month) %>% 
+  summarize(number_of_rides = n()) %>% 
+  arrange(rideable_type, month) %>% 
+  ggplot(aes(month, number_of_rides, fill = rideable_type)) + geom_col(position = "dodge") + labs(x = "Month", y = "Number of rides by bike type", title = "Bike type most popular by month", fill = "Type of bike") + theme_classic()
+```
+Between May and June the classic bike is the most popular and the electric bike is very use in the mid-summer until winter. 
+
+# Act
+
+### Conclusion
+
+The mode for casual and member users, and the average trip duration during the entire week, demonstrate a marked difference between these two types of users. Casual members use bikes mainly on weekends, while members use bikes for a constant time during all their trips in the workweek. Additionally, while casual users spend more time on their trips, members try to save time with shorter trips averaging 12 minutes.
+
+These facts indicate the importance of weekends, and it is noteworthy to mention the peak of the curve during summer months. Therefore, months like June, July, and August have more bike rentals than any other season. Finally, it is worth mentioning the popularity of electric bikes among casual users. 
+
+Therefore, casual users cannot be converted to members in the same way as the latter, due to their different reasons for renting a bike. 
+
+### Recommendations based on your analysis
+
+Some recommendations are:
+
+* Offer an annual weekend-only membership.
+* Offer a summer season membership.
+* Offer tour packages to attract casual users during the workweek.
+* Apply discounts to riders who spend more than 25 minutes on the trip if they get a membership.
+* Focus on all marketing strategies during the summer.
+* Focus marketing strategies on electric bikes.
+
+Contact information:
+https://www.linkedin.com/in/guinansacaw
